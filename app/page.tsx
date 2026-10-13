@@ -1,37 +1,129 @@
 "use client";
-import { useMemo,useState } from "react";
-import { Activity, Shield, Upload, Download, RefreshCw, Sparkles, Search, FileWarning, ShieldCheck } from "lucide-react";
-import { BarChart,Bar,XAxis,Tooltip,ResponsiveContainer,CartesianGrid } from "recharts";
-import { demoEvents } from "@/lib/demo";
-import { detect,normalise } from "@/lib/detect";
-import { Event,Incident } from "@/lib/types";
 
-function csvParse(text:string):Record<string,unknown>[] {
- const lines=text.trim().split(/\r?\n/); if(lines.length<2)return [];
- const split=(line:string)=>{const cells:string[]=[];let cur="",quoted=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'&&quoted){cur+='"';i++;}else if(c==='"')quoted=!quoted;else if(c===","&&!quoted){cells.push(cur);cur="";}else cur+=c;}cells.push(cur);return cells;};
- const keys=split(lines[0]).map(s=>s.trim());return lines.slice(1).filter(Boolean).map(line=>{const vals=split(line);return Object.fromEntries(keys.map((k,i)=>[k,vals[i]??""]));});
+import { ChangeEvent, useMemo, useState } from "react";
+import { Activity, AlertOctagon, ArrowDownToLine, BrainCircuit, CheckCircle2, ChevronRight, FileUp, Filter, Gauge, LoaderCircle, LockKeyhole, Network, RefreshCw, Search, Shield, ShieldAlert, Sparkles, UploadCloud, X } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Incident } from "@/lib/types";
+
+type Stats = { events:number; users:number; critical:number; high:number; medium:number; low:number };
+const initialStats:Stats = {events:0,users:0,critical:0,high:0,medium:0,low:0};
+
+function parseCsv(text:string):Record<string,unknown>[] {
+  const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(line=>line.trim());
+  if(lines.length<2) throw new Error("CSV must contain a header row and at least one event.");
+  const split=(line:string)=>{
+    const cells:string[]=[];let value="",quoted=false;
+    for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'&&quoted){value+='"';i++;}else if(c==='"')quoted=!quoted;else if(c===","&&!quoted){cells.push(value.trim());value="";}else value+=c;}
+    cells.push(value.trim());return cells;
+  };
+  const headers=split(lines[0]);
+  return lines.slice(1).map(line=>{const cells=split(line);return Object.fromEntries(headers.map((h,i)=>[h,cells[i]??""]));});
 }
-function download(name:string,text:string,type="text/csv"){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href);}
+function fmtTime(s:string){const d=new Date(s);return Number.isNaN(d.getTime())?s:d.toLocaleString([],{month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"});}
+function severityClass(s:string){return "severity severity-"+s.toLowerCase();}
+function saveCsv(name:string, rows:string[][]){
+  const csv=rows.map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));const a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
+}
+
 export default function Home(){
- const [events,setEvents]=useState<Event[]>([]);const [incidents,setIncidents]=useState<Incident[]>([]);const [selected,setSelected]=useState("");const [brief,setBrief]=useState<Record<string,unknown>|null>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState("");
- const active=incidents.find(i=>i.id===selected)||incidents[0];
- const load=(data:Event[])=>{setEvents(data);const cases=detect(data);setIncidents(cases);setSelected(cases[0]?.id||"");setBrief(null);setError("");};
- const loadDemo=()=>load(demoEvents);
- const upload=async(file?:File)=>{if(!file)return;try{const data=normalise(csvParse(await file.text()));if(!data.length)throw new Error("CSV has no data rows.");load(data);}catch(e){setError(e instanceof Error?e.message:"Could not read CSV.");}};
- const stats=useMemo(()=>({high:incidents.filter(i=>i.score>=65).length,critical:incidents.filter(i=>i.severity==="Critical").length,open:incidents.filter(i=>i.status!=="Resolved").length}),[incidents]);
- const trend=[{t:"08:00",n:2},{t:"08:05",n:6},{t:"08:10",n:3},{t:"08:15",n:2},{t:"08:20",n:5},{t:"08:25",n:4},{t:"08:30",n:7},{t:"08:35",n:5}];
- const generateBrief=async()=>{if(!active)return;setBusy(true);try{const r=await fetch("/api/copilot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({incident:active})});const j=await r.json();if(!r.ok)throw new Error(j.error||"Copilot request failed");setBrief(j);}catch(e){setError(e instanceof Error?e.message:"Copilot unavailable.");}finally{setBusy(false);}};
- const exportCase=()=>{if(!active)return;download(`${active.user}-case.csv`,["id,timestamp,user,source_ip,device,event_type,action,resource,status,bytes",...active.events.map(e=>[e.id,e.timestamp,e.user,e.source_ip,e.device,e.event_type,e.action,e.resource,e.status,e.bytes].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","))].join("\n"));};
- return <div className="shell"><aside className="sidebar"><div className="brand"><div className="brandmark"><Shield size={22}/></div><div><strong>Signal<span>Sentry</span> AI</strong><small>SECURITY OPERATIONS</small></div></div><div className="section-label">WORKSPACE</div><div className="nav active">◈ &nbsp; Overview <span>●</span></div><div className="nav">⌁ &nbsp; Investigations <span>{incidents.length||"—"}</span></div><div className="nav">◎ &nbsp; Event explorer</div><div className="nav">◇ &nbsp; AI copilot</div><div className="section-label" style={{marginTop:24}}>SYSTEM</div><div className="nav">⚙ &nbsp; Configuration</div><div className="statusbox"><span className="green">● &nbsp; Systems operational</span><small>Detection engine ready</small><small>LLM: optional / fallback enabled</small></div><div className="footnote">SIGNALSENTRY AI · MVP<br/>Evidence-led triage. Human-reviewed response.</div></aside>
- <main className="main"><header className="topbar"><div><span>Workspace</span> / <strong>Security overview</strong></div><div>● <span className="green">Live local session</span> &nbsp; · &nbsp; {new Date().toLocaleDateString()}</div></header><div className="wrap"><div className="heading"><div><div className="eyebrow">SECURITY OPERATIONS CENTER / OVERVIEW</div><h1>Threat intelligence dashboard</h1><p>Detect suspicious patterns, investigate evidence, and prioritise response.</p></div><div className="actions"><label className="upload"><Upload size={13} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/>Upload CSV<input type="file" accept=".csv,text/csv" onChange={e=>upload(e.target.files?.[0])}/></label><button onClick={loadDemo}><RefreshCw size={13} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/>Load demo data</button><button className="primary" onClick={exportCase} disabled={!active}><Download size={13} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/>Export case</button></div></div>
- {error&&<div className="error">{error}</div>}
- <div className="stats"><div className="card"><div className="stat-label">EVENTS ANALYSED</div><div className="stat-value">{events.length.toLocaleString()}</div><div className="stat-foot">Normalized security events</div></div><div className="card"><div className="stat-label">IDENTITIES REVIEWED</div><div className="stat-value">{incidents.length}</div><div className="stat-foot">Grouped by identity</div></div><div className="card"><div className="stat-label">HIGH-RISK IDENTITIES</div><div className="stat-value red">{stats.high}</div><div className="stat-foot">Score 65 or higher</div></div><div className="card"><div className="stat-label">CRITICAL CASES</div><div className="stat-value orange">{stats.critical}</div><div className="stat-foot">{stats.open} cases needing review</div></div></div>
- <div className="layout"><section className="card"><h2>Identity risk distribution</h2><div className="sub">Evidence-weighted heuristic score by identity · not a probability</div>{incidents.length?incidents.slice(0,6).map(i=><div className="barrow" key={i.id}><div className="barlabel">{i.user}</div><div className="barbg"><div className="barfill" style={{width:`${i.score}%`,background:i.score>=85?"var(--red)":i.score>=65?"var(--orange)":i.score>=40?"var(--yellow)":"var(--mint)"}}/></div><div className="barval">{i.score}</div></div>):<div className="empty">Load demo data or upload a CSV to begin.</div>}</section><section className="card"><h2>Events over time</h2><div className="sub">Illustrative demo pattern · event timestamps remain in the case timeline</div><div style={{height:150}}><ResponsiveContainer width="100%" height="100%"><BarChart data={trend}><CartesianGrid stroke="#243244" strokeDasharray="3 3" vertical={false}/><XAxis dataKey="t" tick={{fill:"#8291a5",fontSize:9}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:"#101a27",border:"1px solid #314157",borderRadius:8,fontSize:11}}/><Bar dataKey="n" fill="#5be0ba" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div></section></div>
- <section className="card cases"><div className="casehead"><div><h2>Investigation queue</h2><div className="sub" style={{margin:"5px 0 0"}}>Ranked identities with linked evidence</div></div><div className="mono muted">{incidents.length} CASES</div></div><div className="caserow muted"><div>IDENTITY / CASE</div><div>SEVERITY</div><div>SCORE</div><div>EVENTS</div></div>{incidents.length?incidents.map(i=><div key={i.id} className={`caserow ${active?.id===i.id?"selected":""}`} onClick={()=>{setSelected(i.id);setBrief(null);}}><div><div className="incident-title">{i.user}</div><div className="mono muted">{i.id}</div><div className="muted" style={{marginTop:4,fontSize:10}}>{i.title}</div></div><div><span className={`pill ${i.severity}`}>{i.severity}</span></div><div className="mono">{i.score}/99</div><div className="mono">{i.eventCount} events</div></div>):<div className="empty">Click <b>Load demo data</b> or upload a CSV.</div>}</section>
- <div style={{height:14}}/>
- {active&&<div className="detailgrid"><section className="card"><div className="detailhead"><div><div className="eyebrow">SELECTED INVESTIGATION</div><h2 style={{fontSize:18,margin:"8px 0"}}>{active.title}</h2><div className="muted">{active.user} · {active.id}</div></div><div style={{textAlign:"right"}}><div className="score">{active.score}</div><span className={`pill ${active.severity}`}>{active.severity}</span></div></div><p style={{lineHeight:1.7,color:"#aab8c9"}}>{active.summary}</p><h2 style={{marginTop:22}}>Evidence findings</h2><div className="sub">Each finding links to concrete event IDs</div>{active.evidence.length?active.evidence.map(e=><div className="evidence" key={e.code}><div className="dot"/><div><b>{e.label} <span className="mono orange">+{e.points}</span></b><p>{e.detail}</p><div className="mono muted">EVENTS: {e.eventIds.join(", ")}</div></div></div>):<div className="empty">No configured rule fired for this identity.</div>}</section>
- <div style={{display:"grid",gap:14,alignContent:"start"}}><section className="card"><div className="detailhead"><div><h2><Sparkles size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6,color:"var(--mint)"}}/>AI investigation copilot</h2><div className="sub" style={{marginTop:6}}>Evidence-grounded summary · Gemini optional</div></div><button onClick={generateBrief} disabled={busy}>{busy?"Generating…":"Generate brief"}</button></div>{brief?<><h3 style={{fontSize:13}}>{String(brief.title||"Investigation brief")}</h3><p style={{lineHeight:1.6,color:"#b7c4d4"}}>{String(brief.summary||"")}</p>{Array.isArray(brief.nextSteps)&&brief.nextSteps.map((s,i)=><div className="recommend" key={i}>{i+1}. {String(s)}</div>)}<p className="footnote">{String(brief.caveat||"Advisory only.")} · Provider: {String(brief.provider||"unknown")}</p></>:<p className="muted" style={{lineHeight:1.7}}>Generate an investigation brief with linked findings and suggested human-reviewed next steps.</p>}</section>
- <section className="card"><h2><Activity size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6,color:"var(--mint)"}}/>Event timeline</h2><div className="sub">Chronological activity for {active.user}</div>{active.events.slice(0,12).map(e=><div className="event" key={e.id}><div><small>{new Date(e.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</small></div><p><b>{e.action.replace(/_/g," ")}</b><br/><span className="muted">{e.resource}</span><br/><small>{e.id} · {e.source_ip}</small></p></div>)}</section>
- <section className="card"><h2><ShieldCheck size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6,color:"var(--mint)"}}/>Recommended next steps</h2>{active.recommendations.map((s,i)=><div className="recommend" key={i}>{i+1}. {s}</div>)}</section></div></div>}
- <div className="footnote">Heuristic rules provide triage signals, not proof of compromise. Validate findings with identity-provider, endpoint, cloud audit and network telemetry. No automated containment is performed.</div></div></main></div>;
+  const [incidents,setIncidents]=useState<Incident[]>([]);
+  const [stats,setStats]=useState<Stats>(initialStats);
+  const [selectedId,setSelectedId]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [query,setQuery]=useState("");
+  const [severityFilter,setSeverityFilter]=useState("All");
+  const [error,setError]=useState("");
+  const [copilot,setCopilot]=useState("");
+  const [copilotLoading,setCopilotLoading]=useState(false);
+  const [copilotMode,setCopilotMode]=useState("");
+  const [sourceName,setSourceName]=useState("No data loaded");
+  const selected=incidents.find(i=>i.id===selectedId)||incidents[0];
+  const filtered=useMemo(()=>incidents.filter(i=>(severityFilter==="All"||i.severity===severityFilter)&&`${i.user} ${i.title} ${i.id}`.toLowerCase().includes(query.toLowerCase())),[incidents,severityFilter,query]);
+  const chartData=useMemo(()=>incidents.slice(0,8).map(i=>({time:i.user,risk:i.score})),[incidents]);
+
+  async function analyse(payload:unknown,label:string){
+    setLoading(true);setError("");setCopilot("");setCopilotMode("");
+    try{const res=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await res.json();if(!res.ok)throw new Error(data.error||"Analysis failed.");setIncidents(data.incidents);setStats(data.stats);setSelectedId(data.incidents[0]?.id||"");setSourceName(label);}
+    catch(e){setError(e instanceof Error?e.message:"Unexpected error while analysing events.");}
+    finally{setLoading(false);}
+  }
+  async function uploadFile(event:ChangeEvent<HTMLInputElement>){
+    const file=event.target.files?.[0];if(!file)return;
+    if(!file.name.toLowerCase().endsWith(".csv")){setError("Please select a .csv file.");return;}
+    try{await analyse({events:parseCsv(await file.text())},file.name);}catch(e){setError(e instanceof Error?e.message:"Could not parse CSV.");}
+    event.target.value="";
+  }
+  async function askCopilot(){
+    if(!selected)return;setCopilotLoading(true);setCopilot("");setError("");
+    try{const res=await fetch("/api/copilot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({incident:selected})});const data=await res.json();if(!res.ok)throw new Error(data.error||"Copilot request failed.");setCopilot(data.answer);setCopilotMode(data.mode);}
+    catch(e){setError(e instanceof Error?e.message:"Copilot request failed.");}finally{setCopilotLoading(false);}
+  }
+  function exportReport(){
+    saveCsv("breachlens-incident-report.csv",[["incident_id","user","severity","risk_score","status","event_count","summary"],...incidents.map(i=>[i.id,i.user,i.severity,String(i.score),i.status,String(i.eventCount),i.summary])]);
+  }
+  const chartScore=chartData.length?chartData:[{time:"No data",risk:0}];
+
+  return <main className="shell">
+    <aside className="sidebar">
+      <div className="brand"><div className="brand-icon"><Shield size={21}/></div><div><b>BreachLens<span> AI</span></b><small>SECURITY INTELLIGENCE</small></div></div>
+      <div className="workspace-label">WORKSPACE</div>
+      <button className="nav-item active"><Activity size={17}/> Overview <span className="nav-dot"/></button>
+      <button className="nav-item" onClick={()=>document.getElementById("incidents")?.scrollIntoView({behavior:"smooth"})}><AlertOctagon size={17}/> Incidents <span className="nav-count">{incidents.length}</span></button>
+      <button className="nav-item" onClick={()=>document.getElementById("events")?.scrollIntoView({behavior:"smooth"})}><Network size={17}/> Event timeline</button>
+      <button className="nav-item" onClick={()=>document.getElementById("copilot")?.scrollIntoView({behavior:"smooth"})}><BrainCircuit size={17}/> AI Copilot</button>
+      <div className="sidebar-bottom"><div className="status-light"/><div><b>Detection engine ready</b><small>Local analysis enabled</small></div></div>
+      <div className="sidebar-foot">BREACHLENS BUILD 1.0.0<br/>DEFENSIVE SECURITY MVP</div>
+    </aside>
+    <section className="main">
+      <header className="topbar"><div className="crumb">Workspace <ChevronRight size={14}/> <b>Security overview</b></div><div className="top-actions"><span className="live-pill"><span/> LOCAL ANALYSIS</span><div className="avatar">BL</div></div></header>
+      <div className="content">
+        <div className="page-heading"><div><div className="eyebrow">SECURITY OPERATIONS / OVERVIEW</div><h1>Threat intelligence overview</h1><p>Correlate security events, investigate risk, and prioritise response.</p></div><div className="heading-actions"><button className="button secondary" onClick={()=>analyse({mode:"sample"},"Built-in demo dataset")} disabled={loading}><RefreshCw size={15}/> {loading?"Analysing…":"Load demo data"}</button><label className="button primary"><UploadCloud size={16}/> Upload CSV<input type="file" accept=".csv,text/csv" hidden onChange={uploadFile}/></label></div></div>
+        {error&&<div className="error-banner"><AlertOctagon size={17}/><span>{error}</span><button onClick={()=>setError("")}><X size={15}/></button></div>}
+        <div className="source-line"><span className="source-dot"/> SOURCE: <b>{sourceName}</b><span className="source-divider"/> ENGINE: <b>EXPLAINABLE RULES</b><span className="source-divider"/> <span className="muted">No live SIEM connected</span></div>
+        <div className="metric-grid">
+          <Metric icon={<Activity size={18}/>} label="Events analysed" value={stats.events.toLocaleString()} sub="In current analysis" tone="blue"/>
+          <Metric icon={<AlertOctagon size={18}/>} label="Critical incidents" value={String(stats.critical)} sub="Immediate analyst review" tone="red"/>
+          <Metric icon={<ShieldAlert size={18}/>} label="High risk" value={String(stats.high)} sub="Prioritise investigation" tone="orange"/>
+          <Metric icon={<Gauge size={18}/>} label="Accounts observed" value={String(stats.users)} sub="Unique user identities" tone="purple"/>
+        </div>
+        <div className="overview-grid">
+          <section className="panel chart-panel"><div className="panel-heading"><div><h2>Risk signal overview</h2><p>Ranked user risk scores from current event set</p></div><span className="panel-icon"><Activity size={17}/></span></div>
+            <div className="chart-wrap">{incidents.length?<ResponsiveContainer width="100%" height="100%"><AreaChart data={chartScore} margin={{top:10,right:10,left:-20,bottom:0}}><defs><linearGradient id="riskFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#41d6ad" stopOpacity={0.26}/><stop offset="100%" stopColor="#41d6ad" stopOpacity={0.01}/></linearGradient></defs><CartesianGrid stroke="#202a39" strokeDasharray="3 5" vertical={false}/><XAxis dataKey="time" tick={{fill:"#8491a5",fontSize:10}} axisLine={false} tickLine={false}/><YAxis domain={[0,100]} tick={{fill:"#8491a5",fontSize:10}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:"#111b29",border:"1px solid #293548",borderRadius:10,color:"#e9f0f8"}}/><Area type="monotone" dataKey="risk" name="Risk score" stroke="#41d6ad" strokeWidth={2.5} fill="url(#riskFill)"/></AreaChart></ResponsiveContainer>:<Empty text="Load demo data or upload a CSV to see risk signals."/>}</div><div className="chart-legend"><span><i className="legend-dot green"/>Risk score</span><span className="muted">0–99 heuristic triage score</span></div>
+          </section>
+          <section className="panel severity-panel"><div className="panel-heading"><div><h2>Severity distribution</h2><p>Incidents grouped by risk level</p></div><span className="panel-icon"><Gauge size={17}/></span></div>
+            <div className="severity-bars">{(["Critical","High","Medium","Low"] as const).map(s=>{const n=stats[s.toLowerCase() as keyof Stats] as number;return <div className="severity-row" key={s}><div className="severity-label"><span className={"severity-dot "+s.toLowerCase()}/>{s}<b>{n}</b></div><div className="bar-track"><div className={"bar-fill "+s.toLowerCase()} style={{width:`${n/Math.max(1,incidents.length)*100}%`}}/></div></div>;})}</div>
+            <div className="severity-note"><Shield size={16}/><span>Risk scores are heuristic indicators, not proof of compromise.</span></div>
+          </section>
+        </div>
+        <section className="panel incidents-panel" id="incidents"><div className="panel-heading"><div><h2>Prioritised incidents <span className="sub-count">{incidents.length}</span></h2><p>Grouped by user identity to surface patterns across event types</p></div><button className="button small secondary" onClick={exportReport} disabled={!incidents.length}><ArrowDownToLine size={15}/> Export report</button></div>
+          <div className="table-tools"><div className="searchbox"><Search size={15}/><input placeholder="Search users or incidents..." value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="filterbox"><Filter size={15}/><select value={severityFilter} onChange={e=>setSeverityFilter(e.target.value)}><option>All</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select></div></div>
+          <div className="table-scroll"><table><thead><tr><th>INCIDENT / USER</th><th>SEVERITY</th><th>RISK SCORE</th><th>EVENTS</th><th>LAST OBSERVED</th><th/></tr></thead><tbody>
+            {filtered.map(i=><tr key={i.id} className={selected?.id===i.id?"selected-row":""} onClick={()=>{setSelectedId(i.id);setCopilot("");}}><td><div className="incident-name"><span className={"incident-symbol "+i.severity.toLowerCase()}><ShieldAlert size={16}/></span><div><b>{i.title}</b><small>{i.user} · {i.id}</small></div></div></td><td><span className={severityClass(i.severity)}>{i.severity}</span></td><td><div className="score-cell"><div className="mini-track"><div className={i.score>=85?"critical-fill":i.score>=65?"high-fill":i.score>=40?"medium-fill":"low-fill"} style={{width:`${i.score}%`}}/></div><b>{i.score}</b></div></td><td>{i.eventCount}</td><td className="muted">{fmtTime(i.lastSeen)}</td><td><ChevronRight size={16} className="row-chevron"/></td></tr>)}
+            {!filtered.length&&<tr><td colSpan={6}><Empty text={incidents.length?"No incidents match these filters.":"No analysis yet. Load demo data to begin."}/></td></tr>}
+          </tbody></table></div>
+        </section>
+        {selected&&<div className="detail-grid">
+          <section className="panel detail-panel"><div className="panel-heading"><div><div className="eyebrow">INCIDENT INVESTIGATION</div><h2>{selected.title}</h2><p>{selected.id} <span className="bullet">·</span> User: <b>{selected.user}</b></p></div><span className={severityClass(selected.severity)}>{selected.severity}</span></div>
+            <div className="risk-summary"><div className="risk-number">{selected.score}<small>/99</small></div><div className="risk-copy"><b>Risk score</b><p>{selected.summary}</p></div></div>
+            <h3 className="section-label">Evidence and findings</h3><div className="findings">{selected.findings.map((f,idx)=><div className="finding" key={idx}><div className="finding-check"><AlertOctagon size={15}/></div><div><b>{f.title}</b><p>{f.detail}</p></div><span>+{f.points}</span></div>)}</div>
+            <h3 className="section-label">Recommended next actions</h3><ol className="action-list">{selected.recommendedActions.map((a,i)=><li key={i}><span>{i+1}</span>{a}</li>)}</ol>
+          </section>
+          <section className="panel copilot-panel" id="copilot"><div className="copilot-title"><div className="ai-mark"><Sparkles size={18}/></div><div><h2>AI incident copilot</h2><p>Evidence-grounded investigation assistant</p></div><span className="ai-badge">AI</span></div>
+            <div className="copilot-intro"><BrainCircuit size={22}/><div><b>Investigate this incident</b><p>Generate an analyst-ready assessment from the selected incident's evidence and recommended actions.</p></div></div>
+            <button className="button ai-button" onClick={askCopilot} disabled={copilotLoading}>{copilotLoading?<LoaderCircle size={16} className="spin"/>:<Sparkles size={16}/>} {copilotLoading?"Analysing evidence...":"Generate investigation summary"}</button>
+            {copilot&&<div className="copilot-answer"><div className="answer-head"><CheckCircle2 size={15}/> ASSESSMENT GENERATED <span>{copilotMode}</span></div><pre>{copilot}</pre></div>}
+            {!copilot&&<div className="copilot-placeholder"><BrainCircuit size={17}/><span>Outputs include an assessment, supporting evidence, next steps, and caveats. Gemini is optional; a deterministic fallback is included.</span></div>}
+            <div className="privacy-note"><LockKeyhole size={14}/> Only send approved log data to external AI services. The local rule engine works without an API key.</div>
+          </section>
+        </div>}
+        {selected&&<section className="panel events-panel" id="events"><div className="panel-heading"><div><h2>Event timeline</h2><p>Events associated with the selected user · {selected.events.length} records</p></div><span className="timeline-badge"><Activity size={14}/> Correlated activity</span></div><div className="event-list">{selected.events.map((e,i)=><div className="event-row" key={e.id}><div className="event-rail"><span className={/failed|bypass|export|download|upload|role_assumption/i.test(e.action)?"event-dot risky":"event-dot"}/>{i<selected.events.length-1&&<i/>}</div><div className="event-time">{fmtTime(e.timestamp)}</div><div className="event-main"><b>{e.action.replace(/_/g," ")}</b><small>{e.event_type} · {e.resource}</small></div><div className="event-ip">{e.source_ip}</div><span className={"event-status "+(e.status==="failed"||e.status==="blocked"?"bad":"")}>{e.status||"unknown"}</span><span className="event-id">{e.id}</span></div>)}</div></section>}
+        <footer>BREACHLENS AI <span>·</span> Explainable security triage <span>·</span> Demo data is synthetic. Not a replacement for a production SIEM or incident-response process.</footer>
+      </div>
+    </section>
+  </main>;
 }
+function Metric({icon,label,value,sub,tone}:{icon:React.ReactNode;label:string;value:string;sub:string;tone:string}) {
+  return <div className="metric-card"><div className="metric-top"><span>{label}</span><span className={"metric-icon "+tone}>{icon}</span></div><div className="metric-value">{value}</div><div className="metric-sub"><span className="metric-status-dot"/> {sub}</div></div>;
+}
+function Empty({text}:{text:string}) {return <div className="empty-state"><Shield size={22}/><span>{text}</span></div>;}
