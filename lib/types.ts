@@ -1,0 +1,3 @@
+export type Event = { id:string; timestamp:string; user:string; source_ip:string; device:string; event_type:string; action:string; resource:string; status:string; bytes:number };
+export type Evidence = { code:string; label:string; points:number; detail:string; eventIds:string[] };
+export type Incident = { id:string; user:string; score:number; severity:"Critical"|"High"|"Medium"|"Low"; title:string; status:"Open"|"Investigating"|"Resolved"; summary:string; firstSeen:string; lastSeen:string; eventCount:number; evidence:Evidence[]; recommendations:string[]; events:Event[]; confidence:"High"|"Moderate"|"Low" };

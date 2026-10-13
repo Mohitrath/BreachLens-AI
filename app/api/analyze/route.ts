@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { demoEvents } from "@/lib/demo";
+import { normalise, detect } from "@/lib/detect";
+export async function POST(request:Request){try{const body=await request.json();const raw=Array.isArray(body?.events)?body.events:body?.mode==="demo"?demoEvents:null;if(!raw)return NextResponse.json({error:"Provide { mode: 'demo' } or an events array."},{status:400});if(raw.length>5000)return NextResponse.json({error:"Maximum 5,000 events per request."},{status:413});const events=normalise(raw);const incidents=detect(events);return NextResponse.json({events,incidents,stats:{totalEvents:events.length,identities:new Set(events.map(e=>e.user)).size,highRisk:incidents.filter(i=>i.score>=65).length}});}catch{return NextResponse.json({error:"Invalid JSON request."},{status:400});}}
