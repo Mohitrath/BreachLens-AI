@@ -25,6 +25,28 @@
 
 ---
 
+## 🖼️ Screenshots
+
+These images are captured from the **deployed BreachLens AI application**, rather than illustrative mockups. The screenshot URLs render the live page when the README is viewed.
+
+<p align="center">
+  <strong>Desktop dashboard</strong><br/>
+  <a href="https://breach-lens-ai-mohitrath258-gmailcoms-projects.vercel.app/">
+    <img src="https://image.thum.io/get/width/1280/crop/900/noanimate/https://breach-lens-ai-mohitrath258-gmailcoms-projects.vercel.app/" alt="Live BreachLens AI security dashboard on desktop" width="100%"/>
+  </a>
+</p>
+
+<p align="center">
+  <strong>Compact viewport</strong><br/>
+  <a href="https://breach-lens-ai-mohitrath258-gmailcoms-projects.vercel.app/">
+    <img src="https://image.thum.io/get/width/390/crop/844/noanimate/https://breach-lens-ai-mohitrath258-gmailcoms-projects.vercel.app/" alt="Live BreachLens AI dashboard at a mobile viewport" width="390"/>
+  </a>
+</p>
+
+> Screenshots are generated from the live deployment by an external screenshot service. If an image does not load, open the [live demo](https://breach-lens-ai-mohitrath258-gmailcoms-projects.vercel.app/) directly.
+
+---
+
 ## ✨ What is BreachLens AI?
 
 Security teams can receive thousands of disconnected events from identity providers, endpoints, cloud services, and file systems. Important signals are easy to miss when each event is viewed in isolation.
