@@ -45,6 +45,7 @@ Security teams can receive thousands of disconnected events from identity provid
 | 🕒 **Event timeline** | Shows relevant activity in chronological order for the selected case. |
 | ✨ **AI investigation copilot** | Uses Gemini when configured, with a deterministic fallback when it is not. |
 | 📤 **CSV report export** | Downloads a summary of the current incident queue for review and documentation. |
+| 🔐 **Supabase authentication** | Email/password signup, login, password reset, server-verified sessions, protected dashboard/API routes, and logout. |
 
 ## 🧪 Signals the current rules look for
 
@@ -95,7 +96,7 @@ Copy-Item .env.example .env.local
 cp .env.example .env.local
 ```
 
-The Gemini key is optional. Leave it blank to use the built-in deterministic copilot response. If you configure a key, add it only to your local `.env.local` file—never commit it.
+Supabase authentication variables are required. Create a project at [Supabase](https://supabase.com), then copy the project URL and anon/public key into `.env.local` and your Vercel project environment settings. The Gemini key is optional. Leave it blank to use the built-in deterministic copilot response. Never commit actual credentials or `.env.local`.
 
 ### 4. Start the development server
 
@@ -103,7 +104,7 @@ The Gemini key is optional. Leave it blank to use the built-in deterministic cop
 npm run dev
 ```
 
-Open **http://localhost:3000**, then select **Load demo data** to populate the dashboard. You can also upload a CSV from your own test dataset.
+Open **http://localhost:3000**. Create an account or sign in first; if email confirmation is enabled in Supabase, confirm your email from the message before signing in. After authentication, select **Load demo data** to populate the dashboard. You can also upload a CSV from your own test dataset.
 
 ### 5. Make a production build
 
@@ -242,11 +243,21 @@ Submit the selected incident object for an evidence-oriented assessment:
 - **Lucide React** — interface icons
 - **Gemini API (optional)** — AI-assisted incident assessment
 
+## 🔐 Authentication setup
+
+1. Create a Supabase project and open **Project Settings → API**.
+2. Copy the Project URL and anon/public key into `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+3. Add the same variables to Vercel under **Project → Settings → Environment Variables**, then redeploy.
+4. In Supabase Authentication URL Configuration, set the Site URL to your deployed domain and add `http://localhost:3000/auth/callback` plus `https://YOUR-VERCEL-DOMAIN/auth/callback` to the allowed redirect URLs.
+5. Use the login page to create an account, confirm the email if enabled, and sign in. Dashboard pages and `/api/*` endpoints require a valid Supabase session.
+
+Use only the Supabase anon/public key in `NEXT_PUBLIC_SUPABASE_ANON_KEY`. **Never expose a Supabase service-role key in client code or a `NEXT_PUBLIC_*` variable.**
+
 ## 🔐 Security posture and current limitations
 
 BreachLens AI is a **hackathon MVP / local demonstration**, not a production SIEM or incident-response platform.
 
-- No authentication, role-based access control, multi-tenancy, or database persistence.
+- Supabase email/password authentication protects dashboard pages and API endpoints. This MVP still does not include role-based access control, multi-tenancy, or database persistence for incident records.
 - No live SIEM/EDR/cloud audit connectors; events are loaded from a CSV or the built-in sample scenario.
 - Correlation is currently performed per user over the uploaded dataset, rather than using bounded time windows and a full entity graph.
 - Rule scores can create false positives and false negatives. They have not been calibrated or benchmarked against a labelled dataset.
