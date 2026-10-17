@@ -75,8 +75,8 @@ export default function LoginPage() {
         {mode === "login" && <button type="button" className="auth-text-button auth-forgot" onClick={()=>{setMode("forgot");setError("");setMessage("");}}>Forgot password?</button>}
         <button className="auth-submit" type="submit" disabled={busy || !configured}>{busy ? "Please wait…" : mode==="login" ? "Sign in securely" : mode==="signup" ? "Create account" : "Send reset link"} <ArrowRight size={16}/></button>
       </form>
-      <div className="auth-switch">{mode==="login" ? <>New to BreachLens? <button onClick={()=>{setMode("signup");setError("");setMessage("");}}>Create an account</button></> : mode==="signup" ? <>Already registered? <button onClick={()=>{setMode("login");setError("");setMessage("");}}>Sign in</button></> : <>Remembered your password? <button onClick={()=>{setMode("login");setError("");setMessage("");}}>Back to sign in</button></>}</div>
-      <div className="auth-security-note"><LockKeyhole size={14}/> Sessions are verified server-side. Never share your password or API keys.</div>
+      {configured && <div className="auth-switch">{mode==="login" ? <>New to BreachLens? <button onClick={()=>{setMode("signup");setError("");setMessage("");}}>Create an account</button></> : mode==="signup" ? <>Already registered? <button onClick={()=>{setMode("login");setError("");setMessage("");}}>Sign in</button></> : <>Remembered your password? <button onClick={()=>{setMode("login");setError("");setMessage("");}}>Back to sign in</button></>}</div>}
+      <div className="auth-security-note"><LockKeyhole size={14}/>{configured ? "Sessions are verified server-side. Never share your password or API keys." : "Public demo only · Do not use real or sensitive security logs."}</div>
     </div></section>
   </main>;
 }
