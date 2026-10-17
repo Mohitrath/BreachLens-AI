@@ -8,13 +8,16 @@ export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  // Public demo mode: when Supabase credentials are absent, allow visitors to
+  // try the hackathon demo without creating an account. This is NOT secure auth.
   if (!url || !key) {
-    if (isApi) return NextResponse.json({ error: "Authentication is not configured. Set the Supabase environment variables." }, { status: 503 });
-    if (isLogin || pathname === "/reset-password") return NextResponse.next();
-    const target = request.nextUrl.clone();
-    target.pathname = "/login";
-    target.search = "?setup=1";
-    return NextResponse.redirect(target);
+    if (isLogin) {
+      const target = request.nextUrl.clone();
+      target.pathname = "/";
+      target.search = "";
+      return NextResponse.redirect(target);
+    }
+    return NextResponse.next();
   }
 
   let response = NextResponse.next({ request });
