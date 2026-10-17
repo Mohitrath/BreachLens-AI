@@ -55,3 +55,5 @@
 .auth-logout{padding:8px 10px}
 @media(max-width:900px){.auth-shell{grid-template-columns:1fr}.auth-visual{display:none}.auth-form-side{min-height:100vh;padding:24px}.auth-mobile-brand{display:flex;align-items:center;gap:7px;color:#eaf0f7;font-size:16px;font-weight:800;margin-bottom:55px}.auth-mobile-brand svg{color:var(--green)}}
 @media(max-width:460px){.auth-form-side{padding:22px}.auth-mobile-brand{margin-bottom:40px}.auth-form-head h2{font-size:24px}.auth-reset-card{padding:23px}}
+
+.demo-mode-pill{border-color:#7a5b2b!important;color:#ffd18a!important;background:rgba(120,80,20,.14)!important}.demo-mode-pill>span{background:#f4b942!important}
