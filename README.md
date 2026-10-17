@@ -96,7 +96,7 @@ Copy-Item .env.example .env.local
 cp .env.example .env.local
 ```
 
-Supabase authentication variables are required. Create a project at [Supabase](https://supabase.com), then copy the project URL and anon/public key into `.env.local` and your Vercel project environment settings. The Gemini key is optional. Leave it blank to use the built-in deterministic copilot response. Never commit actual credentials or `.env.local`.
+Supabase authentication is optional for the public hackathon demo. If Supabase variables are absent, the app opens in clearly labeled **public demo mode** so judges can explore without setup; this mode is not private and does not provide authentication. To enable real accounts, create a project at [Supabase](https://supabase.com), then copy the project URL and anon/public key into `.env.local` and your Vercel project environment settings. The Gemini key is optional. Leave it blank to use the built-in deterministic copilot response. Never commit actual credentials or `.env.local`.
 
 ### 4. Start the development server
 
@@ -104,7 +104,7 @@ Supabase authentication variables are required. Create a project at [Supabase](h
 npm run dev
 ```
 
-Open **http://localhost:3000**. Create an account or sign in first; if email confirmation is enabled in Supabase, confirm your email from the message before signing in. After authentication, select **Load demo data** to populate the dashboard. You can also upload a CSV from your own test dataset.
+Open **http://localhost:3000**. Without Supabase credentials, you can explore the public demo directly; this mode is for non-sensitive sample data only and is not access-controlled. With Supabase configured, create an account or sign in first; if email confirmation is enabled, confirm your email before signing in. After opening the dashboard, select **Load demo data** to populate it. You can also upload a CSV from your own test dataset.
 
 ### 5. Make a production build
 
