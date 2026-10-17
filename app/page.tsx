@@ -6,7 +6,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { Incident } from "@/lib/types";
 import LogoutButton from "@/components/LogoutButton";
 
-type Stats = { events:number; users:number; critical:number; high:number; medium:number; low:number };
+type Stats = { events:number; users:number; critical:number; high:number; medium:number; low:number };\nconst authConfigured = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const initialStats:Stats = {events:0,users:0,critical:0,high:0,medium:0,low:0};
 
 function parseCsv(text:string):Record<string,unknown>[] {
@@ -77,7 +77,7 @@ export default function Home(){
       <div className="sidebar-foot">BREACHLENS BUILD 1.0.0<br/>DEFENSIVE SECURITY MVP</div>
     </aside>
     <section className="main">
-      <header className="topbar"><div className="crumb">Workspace <ChevronRight size={14}/> <b>Security overview</b></div><div className="top-actions"><span className="live-pill"><span/> LOCAL ANALYSIS</span><div className="avatar">BL</div><LogoutButton/></div></header>
+      <header className="topbar"><div className="crumb">Workspace <ChevronRight size={14}/> <b>Security overview</b></div><div className="top-actions"><span className="live-pill"><span/> LOCAL ANALYSIS</span>{!authConfigured && <span className="live-pill demo-mode-pill"><span/> PUBLIC DEMO · NO AUTH</span>}<div className="avatar">BL</div>{authConfigured && <LogoutButton/>}</div></header>
       <div className="content">
         <div className="page-heading"><div><div className="eyebrow">SECURITY OPERATIONS / OVERVIEW</div><h1>Threat intelligence overview</h1><p>Correlate security events, investigate risk, and prioritise response.</p></div><div className="heading-actions"><button className="button secondary" onClick={()=>analyse({mode:"sample"},"Built-in demo dataset")} disabled={loading}><RefreshCw size={15}/> {loading?"Analysing…":"Load demo data"}</button><label className="button primary"><UploadCloud size={16}/> Upload CSV<input type="file" accept=".csv,text/csv" hidden onChange={uploadFile}/></label></div></div>
         {error&&<div className="error-banner"><AlertOctagon size={17}/><span>{error}</span><button onClick={()=>setError("")}><X size={15}/></button></div>}
