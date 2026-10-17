@@ -25,6 +25,27 @@
 
 ---
 
+## 🖼️ Application Screenshots
+
+The following screenshots show the actual BreachLens AI interface: the security overview, prioritised incident investigation, and AI incident copilot output.
+
+<p align="center">
+  <strong>1. Security overview</strong><br/>
+  <img src="docs/screenshots/security-overview.jpg" alt="BreachLens AI security overview dashboard" width="100%"/>
+</p>
+
+<p align="center">
+  <strong>2. Prioritised incidents and investigation</strong><br/>
+  <img src="docs/screenshots/incident-investigation.jpg" alt="BreachLens AI prioritised incidents and investigation evidence" width="100%"/>
+</p>
+
+<p align="center">
+  <strong>3. AI incident copilot assessment</strong><br/>
+  <img src="docs/screenshots/ai-copilot-assessment.jpg" alt="BreachLens AI incident copilot assessment grounded in evidence" width="100%"/>
+</p>
+
+---
+
 ## ✨ What is BreachLens AI?
 
 Security teams can receive thousands of disconnected events from identity providers, endpoints, cloud services, and file systems. Important signals are easy to miss when each event is viewed in isolation.
