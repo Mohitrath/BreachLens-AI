@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Activity, ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [callbackError, setCallbackError] = useState(false);
+  useEffect(() => { setCallbackError(new URLSearchParams(window.location.search).get("error") === "callback"); }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +66,7 @@ export default function LoginPage() {
       <div className="auth-mobile-brand"><ShieldCheck size={20}/> BreachLens<span className="auth-green"> AI</span></div>
       <div className="auth-form-head"><div className="auth-form-icon"><LockKeyhole size={19}/></div><h2>{title}</h2><p>{subtitle}</p></div>
       {!configured && <div className="auth-alert">Setup required: add your Supabase project URL and anon key to <code>.env.local</code> and Vercel environment variables before using authentication.</div>}
-      {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("error") === "callback" && <div className="auth-alert">The confirmation link could not be verified or has expired. Request a new link and try again.</div>}
+      {callbackError && <div className="auth-alert">The confirmation link could not be verified or has expired. Request a new link and try again.</div>}
       {message && <div className="auth-success">{message}</div>}
       {error && <div className="auth-alert">{error}</div>}
       <form className="auth-form" onSubmit={submit}>
